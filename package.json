@@ -1,5 +1,6 @@
 {
   "version": "0.0.1",
+  "apiversion": "v1.0",
   "os": "linux",
   "author": {
     "name": "Alexander Farennikov",

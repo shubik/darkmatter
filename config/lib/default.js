@@ -1,4 +1,4 @@
-var baseDir = __dirname + '/..';
+var baseDir = __dirname + '/../..';
 
 module.exports = {
 
@@ -6,9 +6,10 @@ module.exports = {
 
     'app' : {
         'run' : {
-            'exec_mode' : 'fork',
-            'pidfile'   : 'app.pid',
-            'instances' : 1
+            'exec_mode'   : 'fork',
+            'pidfile'     : 'app.pid',
+            'proc-prefix' : require('../../package.json').name + '-',
+            'instances'   : 1
         }
     },
 
@@ -23,21 +24,21 @@ module.exports = {
     'webserver' : {
 
         'title'  : 'Dark matter',
-        'server' : 'HTTP',
+        'secure' : false,
 
         /* --- HTTP --- */
 
-        'http' : {
+        'HTTP' : {
             'port' : 8000
         },
 
         /* --- HTTPS, SSL - do not use! Strip at load balancer --- */
 
-        'https' : {
+        'HTTPS' : {
             'port'       : 8000,
-            'certfile'   : baseDir + '/ssl/cassl.crt',
-            'keyfile'    : baseDir + '/ssl/app.key',
-            'cafile'     : baseDir + '/ssl/cabundle.pem',
+            'certFile'   : baseDir + '/ssl/cassl.crt',
+            'keyFile'    : baseDir + '/ssl/app.key',
+            'caFile'     : baseDir + '/ssl/cabundle.pem',
             'passphrase' : 'T4$82UgaPE8PeYe#azed@ut7eFraWEfE'
         }
     },
