@@ -10,7 +10,13 @@ module.exports = {
             'pidfile'     : 'app.pid',
             'proc-prefix' : require('../../package.json').name + '-',
             'instances'   : 1
-        }
+        },
+
+        'models' : [
+            'item',
+            'thing',
+            'user'
+        ]
     },
 
     /* --- Paths --- */
