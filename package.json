@@ -1,0 +1,38 @@
+{
+  "version": "0.0.1",
+  "author": {
+    "name": "Alexander Farennikov",
+    "email": "farennikov@gmail.com"
+  },
+  "name": "darkmatter",
+  "description": "Simple ODM for Node.js with pluggable adapters",
+  "keywords": [
+    "ODM",
+    "object document mapping",
+    "darkmatter",
+    "adapter",
+    "mongodb"
+  ],
+  "homepage": "https://github.com/shubik/darkmatter",
+  "license": "MIT",
+  "contributors": [],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shubik/darkmatter"
+  },
+  "bugs": {
+    "url": "https://github.com/shubik/darkmatter/issues"
+  },
+  "main": "./lib/index.js",
+  "scripts": {},
+  "engines": {
+    "node": ">= 0.11.11"
+  },
+  "dependencies": {
+    "lodash": "~2.4.1",
+    "deferred": "~0.6.1",
+    "mongodb": "~1.2.14",
+    "MD5": "~1.0.3"
+  },
+  "devDependencies": {}
+}
