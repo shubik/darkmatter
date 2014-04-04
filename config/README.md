@@ -1,0 +1,1 @@
+Should contain only JS files
