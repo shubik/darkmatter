@@ -26,6 +26,8 @@ ModelFactory = function(options) {
         modelStore           = options.store || null,
         modelPermissions     = options.permissions || {},
         modelRoles           = options.roles || {},
+        modelEnableAPI       = options.enableAPImodel || true,
+        modelEnableMixinsAPI = options.enableAPImixins || true,
         ModelConstructor;
 
     reusablePool[modelName] = reusablePool[modelName] || [];
@@ -143,6 +145,8 @@ ModelFactory = function(options) {
         },
 
         registerRESTEndpoints: function(app) {
+            if (!modelEnableAPI) return;
+
             app.namespace(modelName, function() {
 
                 /* --- List items --- */
@@ -182,15 +186,12 @@ ModelFactory = function(options) {
         },
 
         registerMixinAPIEndpoints: function(app) {
-            // working with already namespaced app
-            // iterate through all mixins and register API endpoints
-
-            // app.all('*', function(req, res) {
-            //     res.send('Item model');
-            // });
+            if (!modelEnableMixinsAPI) return;
 
             app.namespace(modelName, function() {
-
+                _.each(modelMixins, function(mixin) {
+                    mixin.registerAPIEndpoints ? mixin.registerAPIEndpoints(app) : 0;
+                });
             });
         }
 
