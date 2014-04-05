@@ -1,5 +1,4 @@
 var _            = require('lodash'),
-    Events       = require('events').EventEmitter,
     deferred     = require('deferred'),
     // Datatypes    = require('./datatypes'),
     // Hooks        = require('./hooks'),
@@ -57,12 +56,6 @@ ModelFactory = function(options) {
 
             return inst;
         }
-
-        /* --- Add events API --- */
-
-        this._events = new Events;
-        _.extend(this, this._events.__proto__);
-        this.setMaxListeners(0);
 
         /* --- Make sure schema item keys do not clash with this model methods and properties --- */
 
@@ -219,8 +212,7 @@ ModelFactory = function(options) {
             var self = this,
                 modelData = {
                     id: this.id,
-                    name: this._name,
-                    events: this._events
+                    name: this._name
                 };
 
             this._inUse = false;
@@ -234,6 +226,7 @@ ModelFactory = function(options) {
             this._attributes = {};
             this._attributesBefore = {};
             this._attributesChanged = [];
+            this._mixinSnapshots = {};
 
             /* --- Instance "public" attributes and methods --- */
 
@@ -247,7 +240,8 @@ ModelFactory = function(options) {
             /* --- Initialize mixins with model data --- */
 
             this._mixinClasses.forEach(function(mixin) {
-                mixin.initialize && mixin.initialize(modelData);
+                // self._mixinSnapshots[mixin.name] = mixin.initialize(modelData);
+                // add this mixin's callbacks to lifecycle events
             });
         },
 
@@ -280,7 +274,6 @@ ModelFactory = function(options) {
         _new: function() {
             this.id = null;
             this._isNew = true;
-            this._mixinSnapshots = {};
             this._interactions = {};
 
             this._attributes = _.reduce(this._schema, function(memo, val, key) {

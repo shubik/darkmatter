@@ -8,6 +8,7 @@ var ModelFactory = require('../darkmatter/model_factory'),
     Model;
 
 testMixin.registerAPIEndpoints = function(app) {
+    var mixinName = 'test';
 
     /*
 
@@ -19,12 +20,25 @@ testMixin.registerAPIEndpoints = function(app) {
 
     */
 
-    app.get('/:id/test', function(req, res) {
+    app.get('/:id/' + mixinName, function(req, res) {
         var model = Model();
         console.log('test model', model);
         res.send('test mixin...');
+        /*
+
+         mixin work and update its snapshot, save
+         model.mixins[mixinName].applyAction('get', req)
+
+        */
     });
 }
+
+testMixin.initialize = function(modelData) {
+
+}
+
+
+
 
 options = {
     name: 'item',
