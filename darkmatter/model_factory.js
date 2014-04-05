@@ -41,6 +41,7 @@ ModelFactory = function(options) {
         /* --- Check if model can be used from reisable pool - or create new one --- */
 
         if (!(this instanceof ModelConstructor)) {
+
             var availableInstance = _.filter(reusablePool[modelName], function(inst) {
                     return !inst._inUse;
                 }),
@@ -56,6 +57,8 @@ ModelFactory = function(options) {
 
             return inst;
         }
+
+        this._cid = _.uniqueId(modelName + '_');
 
         /* --- Make sure schema item keys do not clash with this model methods and properties --- */
 
@@ -182,9 +185,14 @@ ModelFactory = function(options) {
         registerMixinAPIEndpoints: function(app) {
             if (!modelEnableMixinsAPI) return;
 
+            var self = this;
+
             app.namespace(modelName, function() {
                 _.each(modelMixins, function(mixin) {
-                    mixin.registerAPIEndpoints ? mixin.registerAPIEndpoints(app) : 0;
+
+                    // should we create a mixin instance and bind Model to it?
+
+                    mixin.registerAPIEndpoints ? mixin.registerAPIEndpoints(app, self) : 0;
                 });
             });
         }
@@ -217,7 +225,6 @@ ModelFactory = function(options) {
 
             this._inUse = false;
             this._isNew = null;
-            // this._mixins = {};
 
             this._loading = deferred();
             this._ready = this._loading.promise;
@@ -233,20 +240,16 @@ ModelFactory = function(options) {
             this.id = null;
             this.ready = this._ready;
 
-            /* --- Reset event listeners --- */
-
-            this.removeAllListeners();
-
             /* --- Initialize mixins with model data --- */
 
-            this._mixinClasses.forEach(function(mixin) {
-                // self._mixinSnapshots[mixin.name] = mixin.initialize(modelData);
-                // add this mixin's callbacks to lifecycle events
-            });
+            // this._mixinClasses.forEach(function(mixin) {
+            //     // self._mixinSnapshots[mixin.name] = mixin.initialize(modelData);
+            //     // add this mixin's callbacks to lifecycle events
+            // });
         },
 
         _initializeModel: function(query, options) {
-            this._inuse = true;
+            this._inUse = true;
             _.keys(query).length === 0 ? this._new() : this._load(query, options);
             this._cachePermissions();
         },
@@ -318,7 +321,7 @@ ModelFactory = function(options) {
         },
 
         release: function() {
-            this._reset_model();
+            this._resetModel();
         }
 
     }, modelInstanceMethods);

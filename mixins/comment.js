@@ -13,7 +13,7 @@ _.extend(Mixin, {
         console.log('mixin initialize()', Mixin.getName(), modelData);
     },
 
-    registerAPIEndpoints: function(app) {
+    registerAPIEndpoints: function(app, Model) {
 
         /*
 
@@ -27,6 +27,10 @@ _.extend(Mixin, {
 
         app.get('/:id/' + Mixin.getName(), function(req, res) {
             res.send('test mixin: ' +  Mixin.getName());
+
+            var model = Model();
+            model.release();
+            console.log(model);
             /*
 
              mixin work and update its snapshot, save
