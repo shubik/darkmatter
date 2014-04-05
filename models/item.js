@@ -20,7 +20,9 @@ testMixin.registerAPIEndpoints = function(app) {
     */
 
     app.get('/:id/test', function(req, res) {
-        res.send('test mixin...')
+        var model = Model();
+        console.log('test model', model);
+        res.send('test mixin...');
     });
 }
 

@@ -1,5 +1,6 @@
 var _            = require('lodash'),
     Events       = require('events').EventEmitter,
+    deferred     = require('deferred'),
     // Datatypes    = require('./datatypes'),
     // Hooks        = require('./hooks'),
     // Indexes      = require('./indexes'),
