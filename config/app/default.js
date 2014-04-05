@@ -13,9 +13,7 @@ module.exports = {
         },
 
         'models' : [
-            'item',
-            'thing',
-            'user'
+            'item'
         ]
     },
 

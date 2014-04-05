@@ -1,10 +1,10 @@
 var _            = require('lodash'),
     Events       = require('events').EventEmitter,
-    Datatypes    = require('./datatypes'),
-    Hooks        = require('./hooks'),
-    Indexes      = require('./indexes'),
-    Roles        = require('./roles'),
-    Validators   = require('./validators'),
+    // Datatypes    = require('./datatypes'),
+    // Hooks        = require('./hooks'),
+    // Indexes      = require('./indexes'),
+    // Roles        = require('./roles'),
+    // Validators   = require('./validators'),
     reusablePool = {},
     CREATE       = 'c',
     READ         = 'r',
@@ -17,7 +17,7 @@ ModelFactory = function(options) {
     var modelName            = options.name || 'default',
         modelItemType        = options.itemtype || 'default',
         modelDescription     = options.description || 'No description',
-        modelIdAttribute     = options.idAttribute || '_id';
+        modelIdAttribute     = options.idAttribute || '_id',
         modelSchema          = options.schema || {},
         modelMixins          = options.mixins || [],
         modelHooks           = options.hooks || [],
@@ -25,45 +25,40 @@ ModelFactory = function(options) {
         modelInstanceMethods = options.instanceMethods || {},
         modelStore           = options.store || null,
         modelPermissions     = options.permissions || {},
-        modelRoles           = _.extend({}, Roles, options.roles || {}),
+        modelRoles           = options.roles || {},
         ModelConstructor;
 
     reusablePool[modelName] = reusablePool[modelName] || [];
 
-
     ModelConstructor = function(query, options) {
+        var self = this;
 
         query   = query || {};
         options = options || {};
 
-        /* --- Check if model can be used from reisable pool --- */
+        /* --- Check if model can be used from reisable pool - or create new one --- */
 
         if (!(this instanceof ModelConstructor)) {
-
-            /* --- We are in an Object Pool mode --- */
-
-            var availableInstance = _.filter(reusablePool[model_name], function(inst) {
-                    return !inst._inuse;
+            var availableInstance = _.filter(reusablePool[modelName], function(inst) {
+                    return !inst._inUse;
                 }),
                 inst;
 
             if (availableInstance.length) {
                 inst = availableInstance.pop();
-                inst._initialize(query, options);
+                inst._initializeModel(query, options);
             } else {
                 inst = new ModelConstructor(query, options);
-                reusablePool[model_name].push(inst);
+                reusablePool[modelName].push(inst);
             }
 
             return inst;
         }
 
-        /* --- Add EventEmitter API --- */
+        /* --- Add events API --- */
 
-        var self = this,
-            events = new Events;
-
-        _.extend(this, events.__proto__);
+        this._events = new Events;
+        _.extend(this, this._events.__proto__);
         this.setMaxListeners(0);
 
         /* --- Make sure schema item keys do not clash with this model methods and properties --- */
@@ -88,11 +83,11 @@ ModelFactory = function(options) {
 
         /* --- Setup model internal attributes --- */
 
-        this._reset_model();
+        this._resetModel();
 
         /* --- Initialize this model --- */
 
-        this._initialize(query, options);
+        this._initializeModel(query, options);
 
         return this;
     }
@@ -103,14 +98,13 @@ ModelFactory = function(options) {
 
         /* --- Private properties --- */
 
-        _name: modelName,
-        _schema: modelSchema,
-        _idAttribute: modelIdAttribute,
-        _store: modelStore,
-        _description: modelDescription,
-        _mixins: modelMixins,
+        _name        : modelName,
+        _schema      : modelSchema,
+        _idAttribute : modelIdAttribute,
+        _store       : modelStore,
+        _description : modelDescription,
 
-        /* --- Collection methods --- */
+        /* --- Class / collection / static methods --- */
 
         find: function() {
 
@@ -146,6 +140,58 @@ ModelFactory = function(options) {
 
         getItemType: function() {
             return modelItemType;
+        },
+
+        registerRESTEndpoints: function(app) {
+            app.namespace(modelName, function() {
+
+                /* --- List items --- */
+
+                app.get('/', function(req, res) {
+                    res.send('list ' + modelName);
+                });
+
+                /* --- Read item --- */
+
+                app.get('/:id', function(req, res) {
+                    var id = req.params.id;
+                    res.send('get ' + modelName + ' ' + id);
+                });
+
+                /* --- Add new item --- */
+
+                app.post('/', function(req, res) {
+                    res.send('add ' + modelName);
+                });
+
+                /* --- Update item --- */
+
+                app.put('/:id', function(req, res) {
+                    var id = req.params.id;
+                    res.send('update ' + modelName + ' ' + id);
+                });
+
+                /* --- Destroy item --- */
+
+                app.delete('/:id', function(req, res) {
+                    var id = req.params.id;
+                    res.send('delete ' + modelName + ' ' + id);
+                });
+
+            });
+        },
+
+        registerMixinAPIEndpoints: function(app) {
+            // working with already namespaced app
+            // iterate through all mixins and register API endpoints
+
+            // app.all('*', function(req, res) {
+            //     res.send('Item model');
+            // });
+
+            app.namespace(modelName, function() {
+
+            });
         }
 
     }, modelClassMethods);
@@ -156,31 +202,73 @@ ModelFactory = function(options) {
 
         /* --- Private properties --- */
 
-        _name: modelName,
-        _schema: modelSchema,
-        _idAttribute: modelIdAttribute,
-        _store: modelStore,
-        _description: modelDescription,
-        _mixins: modelMixins,
-        _permissions: modelPermissions,
-        _roles: modelRoles,
+        _name         : modelName,
+        _schema       : modelSchema,
+        _idAttribute  : modelIdAttribute,
+        _store        : modelStore,
+        _description  : modelDescription,
+        _mixinClasses : modelMixins,
+        _permissions  : modelPermissions,
+        _roles        : modelRoles,
 
         /* --- Private methods --- */
 
-        _reset_model: function() {
+        _resetModel: function() {
+            var self = this,
+                modelData = {
+                    id: this.id,
+                    name: this._name,
+                    events: this._events
+                };
 
+            this._inUse = false;
+            this._isNew = null;
+            // this._mixins = {};
+
+            this._loading = deferred();
+            this._ready = this._loading.promise;
+
+            this._allowed = {};
+            this._attributes = {};
+            this._attributesBefore = {};
+            this._attributesChanged = [];
+
+            /* --- Instance "public" attributes and methods --- */
+
+            this.id = null;
+            this.ready = this._ready;
+
+            /* --- Reset event listeners --- */
+
+            this.removeAllListeners();
+
+            /* --- Initialize mixins with model data --- */
+
+            this._mixinClasses.forEach(function(mixin) {
+                mixin.initialize && mixin.initialize(modelData);
+            });
         },
 
-        _initialize: function() {
-
+        _initializeModel: function(query, options) {
+            this._inuse = true;
+            _.keys(query).length === 0 ? this._new() : this._load(query, options);
+            this._cachePermissions();
         },
 
         _cachePermissions: function() {
+            /*
 
+             do it when model is loaded
+             map roles, run permission functions for each role
+             cache
+
+            */
+
+            this._loading.resolve(this); // do this when permissions are cached
         },
 
         _validate: function() {
-
+            // do this before save; return true / false
         },
 
         _registerMixin: function(mixin) {
@@ -192,40 +280,19 @@ ModelFactory = function(options) {
             this._isNew = true;
             this._mixinSnapshots = {};
             this._interactions = {};
+
+            this._attributes = _.reduce(this._schema, function(memo, val, key) {
+                memo[key] = val.default;
+                return memo;
+            }, {});
         },
 
-        _resetModel: function() {
-            var self = this;
-
-            this._inuse = false;
-            this._isNew = null;
-
-            this._loading = deferred();
-            this._ready = this._loading.promise;
-
-            this._allowed = {};
-            this._attributes = {};
-            this._attributesBefore = {};
-
-            /* --- Instance "public" attributes --- */
-
-            this.id = null;
-            this.ready = this._loading.promise;
-
-            /* --- Reset event listeners --- */
-
-            this.removeAllListeners();
-
-            /* --- Initialize mixins --- */
-
-            this._mixins.forEach(function(mixin) {
-                mixin.initialize && mixin.initialize.call(self);
-            });
-        },
-
-        _load: function(query) {
+        _load: function(query, options) {
             this._isNew = false;
-            // load model, interactions and mixins snapshots
+
+            // load model from store
+            // load interactions
+            // load mixins snapshots
         },
 
         /* --- Public methods --- */
@@ -239,7 +306,12 @@ ModelFactory = function(options) {
         },
 
         save: function() {
+            /*
 
+             check what attributes have changed
+             validate
+
+            */
         },
 
         destroy: function() {
@@ -248,6 +320,10 @@ ModelFactory = function(options) {
 
         toJSON: function() {
 
+        },
+
+        release: function() {
+            this._reset_model();
         }
 
     }, modelInstanceMethods);
