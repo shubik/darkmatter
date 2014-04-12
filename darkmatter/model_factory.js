@@ -10,7 +10,12 @@ var _            = require('lodash'),
     READ         = 'r',
     UPDATE       = 'u',
     DESTROY      = 'd',
-    ModelFactory;
+    ModelFactory,
+    copy;
+
+copy = function(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
 
 ModelFactory = function(options) {
 
@@ -32,13 +37,13 @@ ModelFactory = function(options) {
 
     reusablePool[modelName] = reusablePool[modelName] || [];
 
-    ModelConstructor = function(query, options) {
+    ModelConstructor = function(modelId, options) {
         var self = this;
 
-        query   = query || {};
         options = options || {};
+        modelId = modelId || null;
 
-        /* --- Check if model can be used from reisable pool - or create new one --- */
+        /* --- Check if model can be used from reusable pool - or create new one --- */
 
         if (!(this instanceof ModelConstructor)) {
 
@@ -47,11 +52,17 @@ ModelFactory = function(options) {
                 }),
                 inst;
 
-            if (availableInstance.length) {
+            if (availableInstance.length > 0) {
+
+                console.log('ModelConstructor reuse instance');
+
                 inst = availableInstance.pop();
-                inst._initializeModel(query, options);
+                inst._initializeModel(modelId, options);
             } else {
-                inst = new ModelConstructor(query, options);
+
+                console.log('ModelConstructor create new instance');
+
+                inst = new ModelConstructor(modelId, options);
                 reusablePool[modelName].push(inst);
             }
 
@@ -59,6 +70,8 @@ ModelFactory = function(options) {
         }
 
         this._cid = _.uniqueId(modelName + '_');
+
+        console.log('ModelConstructor creating new instance...', this._cid);
 
         /* --- Make sure schema item keys do not clash with this model methods and properties --- */
 
@@ -68,7 +81,11 @@ ModelFactory = function(options) {
             }
         });
 
-        /* --- Define setters and getters --- */
+        /* --- Prepare schema --- */
+
+        delete this._schema.id;
+
+        /* --- Define setters and getters for model attributes--- */
 
         _.each(this._schema, function(item, attr) {
             self.__defineSetter__(attr, function(val) {
@@ -80,13 +97,23 @@ ModelFactory = function(options) {
             });
         });
 
-        /* --- Setup model internal attributes --- */
+        /* --- Define getter and setter for model id --- */
+
+        this.__defineSetter__('id', function() {
+            throw new Error('[ModelConstructor] You should not change model id for ' + modelName);
+        });
+
+        this.__defineGetter__('id', function() {
+            return (self._modelId).toString();
+        });
+
+        /* --- Setup model internal attributes to defaults --- */
 
         this._resetModel();
 
         /* --- Initialize this model --- */
 
-        this._initializeModel(query, options);
+        this._initializeModel(modelId, options);
 
         return this;
     }
@@ -145,6 +172,13 @@ ModelFactory = function(options) {
             if (!modelEnableAPI) return;
 
             app.namespace(modelName, function() {
+
+                /*
+
+                 Adds namespace, e.g. /api/v1.0/<model name>
+
+                */
+
 
                 /* --- List items --- */
 
@@ -217,27 +251,30 @@ ModelFactory = function(options) {
         /* --- Private methods --- */
 
         _resetModel: function() {
-            var self = this,
-                modelData = {
-                    id: this.id,
-                    name: this._name
-                };
 
-            this._inUse = false;
-            this._isNew = null;
+            console.log('_resetModel() to defaults');
+
+            var self = this;
+                // modelData = {
+                //     id: this.id,
+                //     name: this._name
+                // };
+
+            this._modelId = null;
+            this._inUse   = false;
+            this._isNew   = null;
 
             this._loading = deferred();
             this._ready = this._loading.promise;
 
             this._allowed = {};
             this._attributes = {};
-            this._attributesBefore = {};
+            this._attributesBefore = copy(this._attributes);
             this._attributesChanged = [];
             this._mixinSnapshots = {};
 
             /* --- Instance "public" attributes and methods --- */
 
-            this.id = null;
             this.ready = this._ready;
 
             /* --- Initialize mixins with model data --- */
@@ -248,13 +285,21 @@ ModelFactory = function(options) {
             // });
         },
 
-        _initializeModel: function(query, options) {
-            this._inUse = true;
-            _.keys(query).length === 0 ? this._new() : this._load(query, options);
+        _initializeModel: function(modelId, options) {
+
+            console.log('_initializeModel()', modelId, options);
+
+            this._inUse   = true;
+            this._modelId = modelId;
+            this._options = options;
+            this._modelId === null ? this._new() : this._load();
             this._cachePermissions();
         },
 
         _cachePermissions: function() {
+
+            console.log('_cachePermissions()');
+
             /*
 
              do it when model is loaded
@@ -267,14 +312,18 @@ ModelFactory = function(options) {
         },
 
         _validate: function() {
+            console.log('_validate()');
             // do this before save; return true / false
         },
 
         _registerMixin: function(mixin) {
-
+            console.log('_registerMixin()');
         },
 
         _new: function() {
+
+            console.log('_new()');
+
             this.id = null;
             this._isNew = true;
             this._interactions = {};
@@ -285,8 +334,10 @@ ModelFactory = function(options) {
             }, {});
         },
 
-        _load: function(query, options) {
+        _load: function() {
             this._isNew = false;
+
+            console.log('_load()', this.id);
 
             // load model from store
             // load interactions
@@ -321,7 +372,7 @@ ModelFactory = function(options) {
         },
 
         release: function() {
-            this._resetModel();
+            this._inUse = false;
         }
 
     }, modelInstanceMethods);

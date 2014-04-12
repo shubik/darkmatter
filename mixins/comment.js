@@ -28,9 +28,13 @@ _.extend(Mixin, {
         app.get('/:id/' + Mixin.getName(), function(req, res) {
             res.send('test mixin: ' +  Mixin.getName());
 
-            var model = Model();
-            model.release();
-            console.log(model);
+            var model = Model(req.params.id);
+
+            model.ready(function(model) {
+                //model.release();
+                console.log(model, model.id);
+                model.id = 0;
+            });
             /*
 
              mixin work and update its snapshot, save
