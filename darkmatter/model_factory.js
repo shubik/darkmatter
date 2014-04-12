@@ -100,7 +100,8 @@ ModelFactory = function(options) {
         /* --- Define getter and setter for model id --- */
 
         this.__defineSetter__('id', function() {
-            throw new Error('[ModelConstructor] You should not change model id for ' + modelName);
+            console.log('[ModelConstructor] You should not change model id', modelName);
+            console.trace();
         });
 
         this.__defineGetter__('id', function() {
@@ -372,7 +373,7 @@ ModelFactory = function(options) {
         },
 
         release: function() {
-            this._inUse = false;
+            this._resetModel();
         }
 
     }, modelInstanceMethods);

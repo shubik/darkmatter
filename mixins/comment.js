@@ -31,9 +31,8 @@ _.extend(Mixin, {
             var model = Model(req.params.id);
 
             model.ready(function(model) {
-                //model.release();
                 console.log(model, model.id);
-                model.id = 0;
+                model.release();
             });
             /*
 
